@@ -1,0 +1,22 @@
+﻿1. CardStorageService
+	
+# NuGet Packets:
+
+* Microsoft.EntityFrameworkCore.Design
+* NLog.Web.AspNetCore
+
+
+2. CardStorageService.Data
+
+# NuGet Packets:
+
+* Microsoft.EntityFrameworkCore
+* Microsoft.EntityFrameworkCore.Proxies
+* Microsoft.EntityFrameworkCore.SqlServer
+* Microsoft.EntityFrameworkCore.Tools
+
+	Create miggration
+
+	Add-Migration InititalCreate
+
+	Update-Database
