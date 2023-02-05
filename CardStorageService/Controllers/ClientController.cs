@@ -5,9 +5,12 @@ using CardStorageService.Services;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Azure.Core;
+using CardStorageService.Models.Dto;
+using Microsoft.AspNetCore.Authorization;
 
 namespace CardStorageService.Controllers
 {
+    [Authorize]
     //[Route("api/[controller]")]
     [Route("api/client")]
     [ApiController]

@@ -1,7 +1,7 @@
 ﻿using System.ComponentModel.DataAnnotations.Schema;
 using System.ComponentModel.DataAnnotations;
 
-namespace CardStorageService.Models
+namespace CardStorageService.Models.Dto
 {
     public class CardDto
     {
