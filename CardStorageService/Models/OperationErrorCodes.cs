@@ -7,5 +7,7 @@
         ReadError,
         UpdateError,
         DeleteError,
+        LogoutError,
+        AcountAlreadyExist,
     }
 }

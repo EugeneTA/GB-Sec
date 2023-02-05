@@ -1,4 +1,6 @@
-﻿namespace CardStorageService.Models.Response.Client
+﻿using CardStorageService.Models.Dto;
+
+namespace CardStorageService.Models.Response.Client
 {
     public class GetClientResponse: OperationResult
     {
