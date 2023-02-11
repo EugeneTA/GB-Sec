@@ -9,5 +9,6 @@
         DeleteError,
         LogoutError,
         AcountAlreadyExist,
+        DatabaseError,
     }
 }

@@ -1,3 +1,4 @@
+using CardStorageService.Config;
 using CardStorageService.Data;
 using CardStorageService.Models.Requests.Account;
 using CardStorageService.Models.Requests.Authentication;
@@ -9,9 +10,11 @@ using EmployeeService.Services.Repositories.Impl;
 using FluentValidation;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using NLog.Web;
+using ServiceUtils;
 using System.Text;
 
 namespace CardStorageService
@@ -20,6 +23,8 @@ namespace CardStorageService
     {
         public static void Main(string[] args)
         {
+            byte[] key = { 1, 6, 9, 2, 3, 67, 92 };
+
             var builder = WebApplication.CreateBuilder(args);
 
             #region Configure Logger
@@ -46,10 +51,22 @@ namespace CardStorageService
 
             #region Configure EF DBContext(CardStorageService.Data)
 
-            builder.Services.AddDbContext<CardStorageServiceDbContext>(options => 
+            CacheProvider cacheProvider = new CacheProvider(key, null);
+
+            try
             {
-                options.UseSqlServer(builder.Configuration["Settings:DatabaseOptions:ConnectionString"]);
-            });
+                // Cache db connection file generated with GenerateDatabaseConnectionString
+                byte[] connectionCache = File.ReadAllBytes(builder.Configuration["Settings:DatabaseOptions:ConnectionString"]);
+                DatabaseConnectionInfo databaseConnectionInfo = cacheProvider.GetDatabaseConnectionFromCahce(connectionCache);
+                builder.Services.AddDbContext<CardStorageServiceDbContext>(options =>
+                {
+                    options.UseSqlServer(databaseConnectionInfo.ToString());
+                });
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error get Db connection string. Error message: {ex.Message}");
+            }
 
             #endregion
 
@@ -99,9 +116,32 @@ namespace CardStorageService
             #endregion
 
 
+
             // Add services to the container.
 
             builder.Services.AddControllers();
+
+            #region Configure settings
+
+            builder.Host.ConfigureAppConfiguration((hostingContext, options) => 
+            {
+                if (hostingContext.HostingEnvironment.IsDevelopment())
+                {
+                    options.AddJsonFile("controllersSetting.Development.json", optional: false, reloadOnChange: true);
+                }
+                else
+                {
+                    options.AddJsonFile("controllersSetting.json", optional: false, reloadOnChange: true);
+
+                }
+                
+            });
+            builder.Services.Configure<AccountControllerConfig>(builder.Configuration.GetSection("AccountController"));
+            builder.Services.Configure<ClientControllerConfig>(builder.Configuration.GetSection("ClientController"));
+            builder.Services.Configure<CardControllerConfig>(builder.Configuration.GetSection("CardController"));
+
+            #endregion
+
             // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
             builder.Services.AddEndpointsApiExplorer();
             builder.Services.AddSwaggerGen(c =>

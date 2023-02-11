@@ -7,6 +7,8 @@ using Microsoft.AspNetCore.Mvc;
 using Azure.Core;
 using CardStorageService.Models.Dto;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.Extensions.Options;
+using CardStorageService.Config;
 
 namespace CardStorageService.Controllers
 {
@@ -20,6 +22,7 @@ namespace CardStorageService.Controllers
 
         private readonly ILogger<ClientController> _logger;
         private readonly IClientRepositoryService _repository;
+        private readonly IOptions<ClientControllerConfig> _configuration;
 
         #endregion
 
@@ -27,10 +30,12 @@ namespace CardStorageService.Controllers
 
         public ClientController(
             ILogger<ClientController> logger,
-            IClientRepositoryService repositoryService)
+            IClientRepositoryService repositoryService,
+            IOptions<ClientControllerConfig> configuration)
         {
             _logger = logger;
             _repository = repositoryService;
+            _configuration = configuration;
         }
 
         #endregion
@@ -60,8 +65,19 @@ namespace CardStorageService.Controllers
                     });
                 }
             }
-            catch
+            catch (Exception ex)
             {
+                if (_configuration.Value.isLogEnabled)
+                {
+                    _logger.LogError($"Create client error ({request.Name} {request.SecondName} {request.Patronymic}. Error: {ex.Message}");
+                }
+
+                return Ok(new CreateClientResponse
+                {
+                    ClientId = 0,
+                    ErrorCode = (int)OperationErrorCodes.DatabaseError,
+                    ErrorMessage = "Client create error. Database error."
+                });
             }
 
             return Ok(new CreateClientResponse
@@ -96,8 +112,19 @@ namespace CardStorageService.Controllers
                     });
                 }
             }
-            catch
+            catch (Exception ex)
             {
+                if (_configuration.Value.isLogEnabled)
+                {
+                    _logger.LogError($"Get client by id {requestId} error. Error: {ex.Message}");
+                }
+
+                return Ok(new GetClientResponse
+                {
+                    Client = null,
+                    ErrorCode = (int)OperationErrorCodes.DatabaseError,
+                    ErrorMessage = $"Get client by id {requestId} error. Database error."
+                });
             }
 
             return Ok(new GetClientResponse
@@ -139,8 +166,19 @@ namespace CardStorageService.Controllers
                     });
                 }
             }
-            catch
+            catch (Exception ex)
             {
+                if (_configuration.Value.isLogEnabled)
+                {
+                    _logger.LogError($"Get clients error. Error: {ex.Message}");
+                }
+
+                return Ok(new GetClientsResponse
+                {
+                    Clients = null,
+                    ErrorCode = (int)OperationErrorCodes.DatabaseError,
+                    ErrorMessage = $"Get clients error. Database error."
+                });
             }
 
             return Ok(new GetClientsResponse
@@ -175,8 +213,18 @@ namespace CardStorageService.Controllers
                     });
                 }
             }
-            catch
+            catch (Exception ex)
             {
+                if (_configuration.Value.isLogEnabled)
+                {
+                    _logger.LogError($"Update client by id {request.Id} error. Error: {ex.Message}");
+                }
+                return Ok(new UpdateClientResponse
+                {
+                    Result = 0,
+                    ErrorCode = (int)OperationErrorCodes.DatabaseError,
+                    ErrorMessage = $"Update client by id {request.Id} error. Database error."
+                });
             }
 
             return Ok(new UpdateClientResponse
@@ -205,8 +253,18 @@ namespace CardStorageService.Controllers
                     });
                 }
             }
-            catch
+            catch (Exception ex)
             {
+                if (_configuration.Value.isLogEnabled)
+                {
+                    _logger.LogError($"Delete client by id {requestId} error. Error: {ex.Message}");
+                }
+                return Ok(new DeleteClientResponse
+                {
+                    Result = 0,
+                    ErrorCode = (int)OperationErrorCodes.DatabaseError,
+                    ErrorMessage = $"Update client by id {requestId} error. Database error."
+                });
             }
 
             return Ok(new DeleteClientResponse

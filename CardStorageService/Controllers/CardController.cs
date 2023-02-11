@@ -1,4 +1,6 @@
-﻿using CardStorageService.Data;
+﻿using Azure.Core;
+using CardStorageService.Config;
+using CardStorageService.Data;
 using CardStorageService.Models;
 using CardStorageService.Models.Dto;
 using CardStorageService.Models.Requests.Card;
@@ -7,6 +9,7 @@ using CardStorageService.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Options;
 
 namespace CardStorageService.Controllers
 {
@@ -20,6 +23,7 @@ namespace CardStorageService.Controllers
 
         private readonly ILogger<CardController> _logger;
         private readonly ICardRepositoryService _repository;
+        private readonly IOptions<CardControllerConfig> _configuration;
 
         #endregion
 
@@ -27,14 +31,15 @@ namespace CardStorageService.Controllers
 
         public CardController(
             ILogger<CardController> logger,
-            ICardRepositoryService repositoryService)
+            ICardRepositoryService repositoryService,
+            IOptions<CardControllerConfig> configuration)
         {
             _logger = logger;
             _repository = repositoryService;
+            _configuration = configuration;
         }
 
         #endregion
-
 
         #region Public methods
 
@@ -63,8 +68,18 @@ namespace CardStorageService.Controllers
                     });
                 }
             }
-            catch
+            catch (Exception ex)
             {
+                if (_configuration.Value.isLogEnabled)
+                {
+                    _logger.LogError($"Create error card for client id {request.ClientId}. Error: {ex.Message}");
+                }
+                return Ok(new CreateCardResponse
+                {
+                    CardId = Guid.Empty,
+                    ErrorCode = (int)OperationErrorCodes.DatabaseError,
+                    ErrorMessage = "Card create error. Database error."
+                });
             }
 
             return Ok(new CreateCardResponse
@@ -100,8 +115,18 @@ namespace CardStorageService.Controllers
                     });
                 }
             }
-            catch
+            catch (Exception ex)
             {
+                if (_configuration.Value.isLogEnabled)
+                {
+                    _logger.LogError($"Get card for id {requestId} error. Error: {ex.Message}");
+                }
+                return Ok(new GetCardResponse
+                {
+                    Card = null,
+                    ErrorCode = (int)OperationErrorCodes.DatabaseError,
+                    ErrorMessage = $"Get card with id {requestId} error. Database error."
+                });
             }
 
             return Ok(new GetCardResponse
@@ -139,8 +164,18 @@ namespace CardStorageService.Controllers
                     });
                 }
             }
-            catch
+            catch (Exception ex)
             {
+                if (_configuration.Value.isLogEnabled)
+                {
+                    _logger.LogError($"Get cards error. Error: {ex.Message}");
+                }
+                return Ok(new GetCardsResponse
+                {
+                    Cards = null,
+                    ErrorCode = (int)OperationErrorCodes.DatabaseError,
+                    ErrorMessage = $"Get cards error. Database error."
+                });
             }
 
             return Ok(new GetCardsResponse
@@ -178,8 +213,18 @@ namespace CardStorageService.Controllers
                     });
                 }
             }
-            catch
+            catch (Exception ex)
             {
+                if (_configuration.Value.isLogEnabled)
+                {
+                    _logger.LogError($"Get cards for client with id {requestId} error. Error: {ex.Message}");
+                }
+                return Ok(new GetCardsResponse
+                {
+                    Cards = null,
+                    ErrorCode = (int)OperationErrorCodes.DatabaseError,
+                    ErrorMessage = $"Get cards for client with id {requestId} error. Database error."
+                });
             }
 
             return Ok(new GetCardsResponse
@@ -216,8 +261,18 @@ namespace CardStorageService.Controllers
                     });
                 }
             }
-            catch
+            catch (Exception ex)
             {
+                if (_configuration.Value.isLogEnabled)
+                {
+                    _logger.LogError($"Card {request.CardId} update error for client id {request.ClientId}. Error: {ex.Message}");
+                }
+                return Ok(new UpdateCardResponse
+                {
+                    Result = 0,
+                    ErrorCode = (int)OperationErrorCodes.DatabaseError,
+                    ErrorMessage = $"Card {request.CardId} update error for client id {request.ClientId}. Database error."
+                });
             }
 
             return Ok(new UpdateCardResponse
@@ -246,8 +301,18 @@ namespace CardStorageService.Controllers
                     });
                 }
             }
-            catch
+            catch (Exception ex)
             {
+                if (_configuration.Value.isLogEnabled)
+                {
+                    _logger.LogError($"Card {requestId} delete error. Error: {ex.Message}");
+                }
+                return Ok(new UpdateCardResponse
+                {
+                    Result = 0,
+                    ErrorCode = (int)OperationErrorCodes.DatabaseError,
+                    ErrorMessage = $"Card {requestId} delete error. Database error."
+                });
             }
 
             return Ok(new DeleteCardResponse

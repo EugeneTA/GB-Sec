@@ -15,13 +15,17 @@ namespace EmployeeService.Services.Repositories.Impl
     {
         public const string SecretKey = "jkrDkfyqnnf+!RsfgrWdlfkd";
         private readonly IServiceScopeFactory _serviceScopeFactory;
+        private readonly ILogger<AuthenticateService> _logger;
 
         private readonly Dictionary<string, SessionDto> _sessions =
             new Dictionary<string, SessionDto>();
 
-        public AuthenticateService(IServiceScopeFactory serviceScopeFactory)
+        public AuthenticateService(
+            IServiceScopeFactory serviceScopeFactory, 
+            ILogger<AuthenticateService> logger)
         {
             _serviceScopeFactory = serviceScopeFactory;
+            _logger = logger;
         }
 
         public SessionDto GetSession(string sessionToken)
@@ -41,7 +45,11 @@ namespace EmployeeService.Services.Repositories.Impl
                 AccountSession session = context.AccountSessions.FirstOrDefault(item => item.SessionToken == sessionToken);
 
                 if (session == null)
+                {
+                    _logger.LogError($"GetSession error. Sesion not found");
                     return null;
+                }
+                   
 
                 Account account = context.Accounts.FirstOrDefault(item => item.AccountId == session.AccountId);
 
@@ -67,6 +75,7 @@ namespace EmployeeService.Services.Repositories.Impl
 
             if (account == null)
             {
+                _logger.LogError($"Login error. Login: {authenticationRequest.Login}");
                 return new AuthenticationResponse
                 {
                     Status = AuthenticationStatus.UserNotFound
