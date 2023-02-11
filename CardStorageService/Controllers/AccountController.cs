@@ -1,4 +1,6 @@
-﻿using CardStorageService.Data;
+﻿using Azure.Core;
+using CardStorageService.Config;
+using CardStorageService.Data;
 using CardStorageService.Models;
 using CardStorageService.Models.Dto;
 using CardStorageService.Models.Requests.Account;
@@ -12,6 +14,7 @@ using FluentValidation;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Options;
 
 namespace CardStorageService.Controllers
 {
@@ -21,11 +24,17 @@ namespace CardStorageService.Controllers
     public class AccountController : ControllerBase
     {
         private readonly IAccountService _accountService;
+        private readonly ILogger<AccountController> _logger;
+        private readonly IOptions<AccountControllerConfig> _configuration;
 
         public AccountController(
-            IAccountService accountService)
+            IAccountService accountService, 
+            ILogger<AccountController> logger,
+            IOptions<AccountControllerConfig> configuration)
         {
             _accountService = accountService;
+            _logger = logger;
+            _configuration = configuration;
         }
 
         [AllowAnonymous]
@@ -33,8 +42,27 @@ namespace CardStorageService.Controllers
         [ProducesResponseType(typeof(Dictionary<string, string[]>), StatusCodes.Status400BadRequest)]
         public IActionResult CreateAccount([FromBody] CreateAccountRequest accountCreateRequest)
         {
-            CreateAccountResponse accountCreateResponse = _accountService.CreateAccount(accountCreateRequest);
-            return Ok(accountCreateResponse);
+            try
+            {
+                CreateAccountResponse accountCreateResponse = _accountService.CreateAccount(accountCreateRequest);
+                return Ok(accountCreateResponse);
+            }
+            catch (Exception ex)
+            {
+                if (_configuration.Value.isLogEnabled)
+                {
+                    _logger.LogError($"Create account {accountCreateRequest.EMail} error. Error: {ex.Message}");
+                }
+                return Ok(new CreateAccountResponse
+                {
+                    EMail = "",
+                    FirstName = "",
+                    SecondName = "",
+                    LastName = "",
+                    ErrorCode = (int)OperationErrorCodes.DatabaseError,
+                    ErrorMessage = $"Can create account {accountCreateRequest.EMail}. Database error."
+                });
+            }          
         }
 
         [HttpGet("get")]
@@ -43,6 +71,10 @@ namespace CardStorageService.Controllers
         {
             try
             {
+                if (_configuration.Value.isLogEnabled)
+                {
+
+                }
                 var client = _accountService.GetAccount(requestId);
 
                 if (client != null)
@@ -62,15 +94,26 @@ namespace CardStorageService.Controllers
                     });
                 }
             }
-            catch
+            catch (Exception ex)
             {
+                if (_configuration.Value.isLogEnabled)
+                {
+                    _logger.LogError($"Get account by id {requestId} error. Error: {ex.Message}");
+                }
+                
+                return Ok(new GetAccountResponse
+                {
+                    Account = null,
+                    ErrorCode = (int)OperationErrorCodes.DatabaseError,
+                    ErrorMessage = $"Can not get client by id={requestId}. Database error."
+                });
             }
 
             return Ok(new GetAccountResponse
             {
                 Account = null,
                 ErrorCode = (int)OperationErrorCodes.ReadError,
-                ErrorMessage = $"Can not get client by id={requestId}"
+                ErrorMessage = $"Can not get account by id={requestId}. Account not found."
             });
         }
 
@@ -100,15 +143,25 @@ namespace CardStorageService.Controllers
                     });
                 }
             }
-            catch
+            catch (Exception ex)
             {
+                if (_configuration.Value.isLogEnabled)
+                {
+                    _logger.LogError($"Update account by id {request.AccountId} error. Error: {ex.Message}");
+                }
+                return Ok(new UpdateAccountResponse
+                {
+                    Result = 0,
+                    ErrorCode = (int)OperationErrorCodes.DatabaseError,
+                    ErrorMessage = "Account was not updated. Database error."
+                });
             }
 
             return Ok(new UpdateAccountResponse
             {
                 Result = 0,
                 ErrorCode = (int)OperationErrorCodes.UpdateError,
-                ErrorMessage = "Account update error"
+                ErrorMessage = "Account was not updated."
             });
         }
 
@@ -130,8 +183,18 @@ namespace CardStorageService.Controllers
                     });
                 }
             }
-            catch
+            catch (Exception ex)
             {
+                if (_configuration.Value.isLogEnabled)
+                {
+                    _logger.LogError($"Delete account by id {requestId} error. Error: {ex.Message}");
+                }
+                return Ok(new DeleteAccountResponse
+                {
+                    Result = 0,
+                    ErrorCode = (int)OperationErrorCodes.DatabaseError,
+                    ErrorMessage = $"Can not delete account by id={requestId}. Database error."
+                });
             }
 
             return Ok(new DeleteAccountResponse

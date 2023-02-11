@@ -1,0 +1,20 @@
+{
+  "AccountController": {
+    "isLogEnabled": true,
+    "environmentVariables": {
+      "ASPNETCORE_ENVIRONMENT": "Development"
+    }
+  },
+  "CardController": {
+    "isLogEnabled": true,
+    "environmentVariables": {
+      "ASPNETCORE_ENVIRONMENT": "Development"
+    }
+  },
+  "ClientController": {
+    "isLogEnabled": false,
+    "environmentVariables": {
+      "ASPNETCORE_ENVIRONMENT": "Development"
+    }
+  }
+}

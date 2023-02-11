@@ -20,15 +20,15 @@ namespace CardStorageService.Services.Impl
     {
         public const string SecretKey = "jkrDkfyqnnf+!RsfgrWdlfkd";
         private readonly IServiceScopeFactory _serviceScopeFactory;
-
-        //private readonly Dictionary<string, SessionDto> _sessions =
-        //    new Dictionary<string, SessionDto>();
+        private readonly ILogger<AccountService> _logger;
 
         public AccountService(
-            IServiceScopeFactory serviceScopeFactory
+            IServiceScopeFactory serviceScopeFactory,
+            ILogger<AccountService> logger
             )
         {
             _serviceScopeFactory = serviceScopeFactory;
+            _logger = logger;
         }
 
         public CreateAccountResponse CreateAccount(CreateAccountRequest accountCreateRequest)
@@ -40,6 +40,7 @@ namespace CardStorageService.Services.Impl
 
             if (account != null)
             {
+                _logger.LogError($"Account {accountCreateRequest.EMail} already exist");
                 return new CreateAccountResponse
                 {
                     EMail = account.EMail,
@@ -53,6 +54,7 @@ namespace CardStorageService.Services.Impl
 
             if (string.IsNullOrEmpty(accountCreateRequest.Password))
             {
+                _logger.LogError($"Defined empty account  password");
                 return new CreateAccountResponse
                 {
                     EMail = account.EMail,
@@ -92,6 +94,7 @@ namespace CardStorageService.Services.Impl
             }
             else 
             {
+                _logger.LogError($"Error save new account to database ({account.EMail}, {account.FirstName}, {account.LastName}, {account.SecondName})");
                 return new CreateAccountResponse
                 {
                     EMail = account.EMail,
@@ -106,32 +109,56 @@ namespace CardStorageService.Services.Impl
 
         public Account GetAccount(int id)
         {
-            if (id == 0) throw new InvalidDataException();
+            if (id == 0)
+            {
+                _logger.LogError("GetAccount id is 0");
+                throw new InvalidDataException();
+            }
 
             using IServiceScope scope = _serviceScopeFactory.CreateScope();
             CardStorageServiceDbContext context = scope.ServiceProvider.GetRequiredService<CardStorageServiceDbContext>();
 
-            if (context == null) throw new InvalidOperationException();
+            if (context == null)
+            {
+                _logger.LogError($"GetAccount error. Can not get database context. Account id: {id}");
+                throw new InvalidOperationException();
+            }
 
             Account account = context.Accounts.FirstOrDefault(acc => acc.AccountId == id);
-            
-            if (account == null) throw new InvalidOperationException();
+
+            if (account == null)
+            {
+                _logger.LogError($"GetAccount error. Can not find account with id: {id}");
+                throw new InvalidOperationException();
+            }
 
             return account;
         }
 
         public int UpdateAccount(Account data)
         {
-            if (data == null) return 0;
+            if (data == null)
+            {
+                _logger.LogError("Update account data empty");
+                return 0;
+            }
 
             using IServiceScope scope = _serviceScopeFactory.CreateScope();
             CardStorageServiceDbContext context = scope.ServiceProvider.GetRequiredService<CardStorageServiceDbContext>();
 
-            if (context == null) return 0;
+            if (context == null)
+            {
+                _logger.LogError($"Update account error. Can not get database context.");
+                return 0;
+            }
 
             Account account = context.Accounts.FirstOrDefault(acc => acc.AccountId == data.AccountId);
 
-            if (account == null) return 0;
+            if (account == null)
+            {
+                _logger.LogError($"UpdateAccount error. Can not find account with id: {data.AccountId}");
+                return 0;
+            }
 
             account.EMail = data.EMail;
             account.Locked = data.Locked;
@@ -149,11 +176,19 @@ namespace CardStorageService.Services.Impl
             using IServiceScope scope = _serviceScopeFactory.CreateScope();
             CardStorageServiceDbContext context = scope.ServiceProvider.GetRequiredService<CardStorageServiceDbContext>();
 
-            if (context == null) return 0;
+            if (context == null)
+            {
+                _logger.LogError($"Delete account error. Can not get database context.");
+                return 0;
+            }
 
             Account account = context.Accounts.FirstOrDefault(acc => acc.AccountId == id);
 
-            if (account == null) return 0;
+            if (account == null)
+            {
+                _logger.LogError($"Delete account error. Can not find account with id: {id}");
+                return 0;
+            }
 
             context.Accounts.Remove(account);
             return context.SaveChanges();

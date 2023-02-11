@@ -19,6 +19,13 @@
 
   <ItemGroup>
     <ProjectReference Include="..\CardStorageService.Data\CardStorageService.Data.csproj" />
+    <ProjectReference Include="..\ServiceUtils\ServiceUtils.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Update="dbConnection.info">
+      <CopyToOutputDirectory>Never</CopyToOutputDirectory>
+    </None>
   </ItemGroup>
 
 </Project>
