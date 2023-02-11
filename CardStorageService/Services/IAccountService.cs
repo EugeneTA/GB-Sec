@@ -1,11 +1,14 @@
 ﻿using CardStorageService.Data;
-using CardStorageService.Models.Requests.Authentication;
-using CardStorageService.Models.Response.Authentication;
+using CardStorageService.Models.Requests.Account;
+using CardStorageService.Models.Response.Account;
 
 namespace CardStorageService.Services
 {
     public interface IAccountService
     {
-        public AccountCreateResponse CreateAccount(AccountCreateRequest accountCreateRequest);
+        public CreateAccountResponse CreateAccount(CreateAccountRequest accountCreateRequest);
+        public Account GetAccount(int id);
+        public int UpdateAccount(Account data);
+        public int Delete(int id);
     }
 }
