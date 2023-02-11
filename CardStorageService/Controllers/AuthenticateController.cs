@@ -1,7 +1,6 @@
 ﻿using CardStorageService.Models;
 using CardStorageService.Models.Dto;
 using CardStorageService.Models.Requests.Authentication;
-using CardStorageService.Models.Response.Authentication;
 using CardStorageService.Services;
 using FluentValidation;
 using FluentValidation.Results;

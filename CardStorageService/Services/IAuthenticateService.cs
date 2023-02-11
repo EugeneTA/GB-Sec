@@ -1,6 +1,5 @@
 ﻿using CardStorageService.Models.Dto;
 using CardStorageService.Models.Requests.Authentication;
-using CardStorageService.Models.Response.Authentication;
 
 namespace CardStorageService.Services
 {

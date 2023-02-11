@@ -8,7 +8,6 @@ using CardStorageService.Models.Requests.Authentication;
 using CardStorageService.Data;
 using CardStorageService.Models;
 using CardStorageService.Utils;
-using CardStorageService.Models.Response.Authentication;
 
 namespace EmployeeService.Services.Repositories.Impl
 {

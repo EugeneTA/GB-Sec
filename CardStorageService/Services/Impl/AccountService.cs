@@ -1,9 +1,15 @@
 ﻿using CardStorageService.Data;
 using CardStorageService.Models;
 using CardStorageService.Models.Dto;
+using CardStorageService.Models.Requests.Account;
 using CardStorageService.Models.Requests.Authentication;
-using CardStorageService.Models.Response.Authentication;
+using CardStorageService.Models.Response.Account;
+using CardStorageService.Models.Validators;
+using EmployeeService.Models.Validators;
+using FluentValidation;
+using FluentValidation.Results;
 using Microsoft.Data.SqlClient;
+using Microsoft.EntityFrameworkCore;
 using System.Runtime.CompilerServices;
 using System.Security.Cryptography;
 using System.Text;
@@ -15,15 +21,17 @@ namespace CardStorageService.Services.Impl
         public const string SecretKey = "jkrDkfyqnnf+!RsfgrWdlfkd";
         private readonly IServiceScopeFactory _serviceScopeFactory;
 
-        private readonly Dictionary<string, SessionDto> _sessions =
-            new Dictionary<string, SessionDto>();
+        //private readonly Dictionary<string, SessionDto> _sessions =
+        //    new Dictionary<string, SessionDto>();
 
-        public AccountService(IServiceScopeFactory serviceScopeFactory)
+        public AccountService(
+            IServiceScopeFactory serviceScopeFactory
+            )
         {
             _serviceScopeFactory = serviceScopeFactory;
         }
 
-        public AccountCreateResponse CreateAccount(AccountCreateRequest accountCreateRequest)
+        public CreateAccountResponse CreateAccount(CreateAccountRequest accountCreateRequest)
         {
             using IServiceScope scope = _serviceScopeFactory.CreateScope();
             CardStorageServiceDbContext context = scope.ServiceProvider.GetRequiredService<CardStorageServiceDbContext>();
@@ -32,7 +40,7 @@ namespace CardStorageService.Services.Impl
 
             if (account != null)
             {
-                return new AccountCreateResponse
+                return new CreateAccountResponse
                 {
                     EMail = account.EMail,
                     FirstName = "",
@@ -45,7 +53,7 @@ namespace CardStorageService.Services.Impl
 
             if (string.IsNullOrEmpty(accountCreateRequest.Password))
             {
-                return new AccountCreateResponse
+                return new CreateAccountResponse
                 {
                     EMail = account.EMail,
                     FirstName = "",
@@ -72,7 +80,7 @@ namespace CardStorageService.Services.Impl
             context.Accounts.Add(account);
             if (context.SaveChanges() > 0)
             {
-                return new AccountCreateResponse
+                return new CreateAccountResponse
                 {
                     EMail = account.EMail,
                     FirstName = account.FirstName,
@@ -84,7 +92,7 @@ namespace CardStorageService.Services.Impl
             }
             else 
             {
-                return new AccountCreateResponse
+                return new CreateAccountResponse
                 {
                     EMail = account.EMail,
                     FirstName = account.FirstName,
@@ -94,6 +102,61 @@ namespace CardStorageService.Services.Impl
                     ErrorMessage = ""
                 };
             }
+        }
+
+        public Account GetAccount(int id)
+        {
+            if (id == 0) throw new InvalidDataException();
+
+            using IServiceScope scope = _serviceScopeFactory.CreateScope();
+            CardStorageServiceDbContext context = scope.ServiceProvider.GetRequiredService<CardStorageServiceDbContext>();
+
+            if (context == null) throw new InvalidOperationException();
+
+            Account account = context.Accounts.FirstOrDefault(acc => acc.AccountId == id);
+            
+            if (account == null) throw new InvalidOperationException();
+
+            return account;
+        }
+
+        public int UpdateAccount(Account data)
+        {
+            if (data == null) return 0;
+
+            using IServiceScope scope = _serviceScopeFactory.CreateScope();
+            CardStorageServiceDbContext context = scope.ServiceProvider.GetRequiredService<CardStorageServiceDbContext>();
+
+            if (context == null) return 0;
+
+            Account account = context.Accounts.FirstOrDefault(acc => acc.AccountId == data.AccountId);
+
+            if (account == null) return 0;
+
+            account.EMail = data.EMail;
+            account.Locked = data.Locked;
+            account.FirstName = data.FirstName;
+            account.SecondName = data.SecondName;
+            account.LastName = data.LastName;
+
+            context.Accounts.Update(account);
+            return context.SaveChanges();
+
+        }
+
+        public int Delete(int id)
+        {
+            using IServiceScope scope = _serviceScopeFactory.CreateScope();
+            CardStorageServiceDbContext context = scope.ServiceProvider.GetRequiredService<CardStorageServiceDbContext>();
+
+            if (context == null) return 0;
+
+            Account account = context.Accounts.FirstOrDefault(acc => acc.AccountId == id);
+
+            if (account == null) return 0;
+
+            context.Accounts.Remove(account);
+            return context.SaveChanges();
         }
 
         private Account FindAccountByLogin(CardStorageServiceDbContext context, string login)

@@ -1,5 +1,7 @@
 using CardStorageService.Data;
+using CardStorageService.Models.Requests.Account;
 using CardStorageService.Models.Requests.Authentication;
+using CardStorageService.Models.Validators;
 using CardStorageService.Services;
 using CardStorageService.Services.Impl;
 using EmployeeService.Models.Validators;
@@ -82,6 +84,9 @@ namespace CardStorageService
             // ѕроверка поступающих данных в запросе
             builder.Services.AddScoped<IValidator<AuthenticationRequest>, AuthenticationRequestValidator>();
 
+            builder.Services.AddScoped<IValidator<UpdateAccountRequest>, UpdateAccountRequestValidator>();
+            builder.Services.AddScoped<IValidator<string>, EmailValidator>();
+            builder.Services.AddScoped<IValidator<string>, PasswordValidator>();
             #endregion
 
             #region Confugure Repositories/Services

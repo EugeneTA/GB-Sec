@@ -1,7 +1,9 @@
-﻿namespace CardStorageService.Models.Response.Authentication
+﻿using System.ComponentModel.DataAnnotations;
+
+namespace CardStorageService.Models.Requests.Account
 {
-    public class AccountCreateResponse: OperationResult
-    { 
+    public class CreateAccountRequest
+    {
         public string? EMail { get; set; }
         public string? Password { get; set; }
         public string? FirstName { get; set; }
