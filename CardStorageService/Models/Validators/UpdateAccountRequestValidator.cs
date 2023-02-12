@@ -11,6 +11,12 @@ namespace CardStorageService.Models.Validators
                 .NotNull()
                 .Length(5, 255)
                 .EmailAddress();
+            RuleFor(x => x.Password)
+                .NotNull()
+                .Length(5, 128);
+            RuleFor(x => x.FirstName)
+                .NotNull()
+                .Length(1, 255);
         }
     }
 }

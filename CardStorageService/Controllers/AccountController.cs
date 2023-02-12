@@ -1,4 +1,5 @@
-﻿using Azure.Core;
+﻿using AutoMapper;
+using Azure.Core;
 using CardStorageService.Config;
 using CardStorageService.Data;
 using CardStorageService.Models;
@@ -11,6 +12,7 @@ using CardStorageService.Services;
 using EmployeeService.Models.Validators;
 using EmployeeService.Services.Repositories.Impl;
 using FluentValidation;
+using FluentValidation.Results;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -23,19 +25,38 @@ namespace CardStorageService.Controllers
     [ApiController]
     public class AccountController : ControllerBase
     {
+        #region Services
+
         private readonly IAccountService _accountService;
         private readonly ILogger<AccountController> _logger;
+        private readonly IMapper _mapper;
         private readonly IOptions<AccountControllerConfig> _configuration;
+        private readonly IValidator<CreateAccountRequest> _createRequestValidator;
+        private readonly IValidator<UpdateAccountRequest> _updateRequestValidator;
+
+        #endregion
+
+        #region Constructors
 
         public AccountController(
             IAccountService accountService, 
             ILogger<AccountController> logger,
-            IOptions<AccountControllerConfig> configuration)
+            IMapper mapper,
+            IOptions<AccountControllerConfig> configuration,
+            IValidator<CreateAccountRequest> createRequestValidator,
+            IValidator<UpdateAccountRequest> updateRequestValidator)
         {
             _accountService = accountService;
             _logger = logger;
+            _mapper = mapper;
             _configuration = configuration;
+            _createRequestValidator = createRequestValidator;
+            _updateRequestValidator = updateRequestValidator;
         }
+
+        #endregion
+
+        #region Public methods
 
         [AllowAnonymous]
         [HttpPost("create")]
@@ -44,8 +65,24 @@ namespace CardStorageService.Controllers
         {
             try
             {
-                CreateAccountResponse accountCreateResponse = _accountService.CreateAccount(accountCreateRequest);
-                return Ok(accountCreateResponse);
+                ValidationResult validationResult =  _createRequestValidator.Validate(accountCreateRequest);
+                if (validationResult.IsValid)
+                {
+                    CreateAccountResponse accountCreateResponse = _accountService.CreateAccount(accountCreateRequest);
+                    return Ok(accountCreateResponse);
+                }
+                else
+                {
+                    return Ok(new CreateAccountResponse
+                    {
+                        EMail = "",
+                        FirstName = "",
+                        SecondName = "",
+                        LastName = "",
+                        ErrorCode = (int)OperationErrorCodes.CreateError,
+                        ErrorMessage = $"Create account parameters are not valid. {validationResult}"
+                    });
+                }
             }
             catch (Exception ex)
             {
@@ -71,27 +108,16 @@ namespace CardStorageService.Controllers
         {
             try
             {
-                if (_configuration.Value.isLogEnabled)
-                {
-
-                }
                 var client = _accountService.GetAccount(requestId);
 
                 if (client != null)
                 {
                     return Ok(new GetAccountResponse
                     {
-                        Account = new AccountDto()
-                        {
-                            AccountId = client.AccountId,
-                            EMail = client.EMail,
-                            FirstName = client.FirstName,
-                            SecondName = client.SecondName,
-                            LastName = client.LastName,
-                        },
+                        Account = _mapper.Map<AccountDto>(client),
                         ErrorCode = (int)OperationErrorCodes.OperationOk,
                         ErrorMessage = ""
-                    });
+                    }) ;
                 }
             }
             catch (Exception ex)
@@ -123,25 +149,32 @@ namespace CardStorageService.Controllers
         {
             try
             {
-                var result = _accountService.UpdateAccount(new Account
+                ValidationResult validationResult = _updateRequestValidator.Validate(request);
+                if (validationResult.IsValid)
                 {
-                    AccountId = request.AccountId,
-                    EMail = request.EMail,
-                    FirstName = request.FirstName,
-                    SecondName = request.SecondName,
-                    LastName = request.LastName,
-                    Locked = request.Locked
-                });
+                    var result = _accountService.UpdateAccount(request);
 
-                if (result > 0)
+                    if (result > 0)
+                    {
+                        return Ok(new UpdateAccountResponse
+                        {
+                            Result = result,
+                            ErrorCode = (int)OperationErrorCodes.OperationOk,
+                            ErrorMessage = ""
+                        });
+                    }
+                }
+                else
                 {
                     return Ok(new UpdateAccountResponse
                     {
-                        Result = result,
-                        ErrorCode = (int)OperationErrorCodes.OperationOk,
-                        ErrorMessage = ""
+                        Result = 0,
+                        ErrorCode = (int)OperationErrorCodes.UpdateError,
+                        ErrorMessage = $"Update account parameters are not valid. {validationResult}"
                     });
                 }
+
+
             }
             catch (Exception ex)
             {
@@ -204,5 +237,7 @@ namespace CardStorageService.Controllers
                 ErrorMessage = $"Can not delete account by id={requestId}"
             });
         }
+
+        #endregion
     }
 }

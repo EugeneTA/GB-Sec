@@ -1,7 +1,11 @@
+using AutoMapper;
 using CardStorageService.Config;
 using CardStorageService.Data;
+using CardStorageService.Mapper;
 using CardStorageService.Models.Requests.Account;
 using CardStorageService.Models.Requests.Authentication;
+using CardStorageService.Models.Requests.Card;
+using CardStorageService.Models.Requests.Client;
 using CardStorageService.Models.Validators;
 using CardStorageService.Services;
 using CardStorageService.Services.Impl;
@@ -101,9 +105,30 @@ namespace CardStorageService
             // ѕроверка поступающих данных в запросе
             builder.Services.AddScoped<IValidator<AuthenticationRequest>, AuthenticationRequestValidator>();
 
+            builder.Services.AddScoped<IValidator<CreateAccountRequest>, CreateAccountRequestValidator>();
             builder.Services.AddScoped<IValidator<UpdateAccountRequest>, UpdateAccountRequestValidator>();
             builder.Services.AddScoped<IValidator<string>, EmailValidator>();
             builder.Services.AddScoped<IValidator<string>, PasswordValidator>();
+
+            builder.Services.AddScoped<IValidator<CreateCardRequest>, CreateCardRequestValidator>();
+            builder.Services.AddScoped<IValidator<UpdateCardRequest>, UpdateCardRequestValidator>();
+
+            builder.Services.AddScoped<IValidator<CreateClientRequest>, CreateClientRequestValidator>();
+            builder.Services.AddScoped<IValidator<UpdateClientRequest>, UpdateClientRequestValidator>();
+
+            #endregion
+
+            #region Configure Automapper
+
+            // Create mapper configuration from our class MapperProfile
+            var mapperConfiguration = new MapperConfiguration(mp => mp.AddProfile(new MapperProfile()));
+
+            // Create mapper from our configuration
+            var mapper = mapperConfiguration.CreateMapper();
+
+            // Register our mapper with the app as singletone 
+            builder.Services.AddSingleton(mapper);
+
             #endregion
 
             #region Confugure Repositories/Services
@@ -115,14 +140,12 @@ namespace CardStorageService
 
             #endregion
 
-
-
             // Add services to the container.
 
             builder.Services.AddControllers();
 
             #region Configure settings
-
+
             builder.Host.ConfigureAppConfiguration((hostingContext, options) => 
             {
                 if (hostingContext.HostingEnvironment.IsDevelopment())
@@ -133,12 +156,20 @@ namespace CardStorageService
                 {
                     options.AddJsonFile("controllersSetting.json", optional: false, reloadOnChange: true);
 
-                }
-                
+                }  
             });
-            builder.Services.Configure<AccountControllerConfig>(builder.Configuration.GetSection("AccountController"));
-            builder.Services.Configure<ClientControllerConfig>(builder.Configuration.GetSection("ClientController"));
-            builder.Services.Configure<CardControllerConfig>(builder.Configuration.GetSection("CardController"));
+            builder.Services.Configure<AccountControllerConfig>(opt => 
+            {
+                builder.Configuration.GetSection("AccountController").Bind(opt);
+            });
+            builder.Services.Configure<ClientControllerConfig>(opt =>
+            {
+                builder.Configuration.GetSection("ClientController").Bind(opt);
+            });
+            builder.Services.Configure<CardControllerConfig>(opt =>
+            {
+                builder.Configuration.GetSection("CardController").Bind(opt);
+            });
 
             #endregion
 
