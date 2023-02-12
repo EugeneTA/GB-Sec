@@ -1,4 +1,5 @@
-﻿using CardStorageService.Data;
+﻿using AutoMapper;
+using CardStorageService.Data;
 using CardStorageService.Models;
 using CardStorageService.Models.Dto;
 using CardStorageService.Models.Requests.Account;
@@ -21,14 +22,17 @@ namespace CardStorageService.Services.Impl
         public const string SecretKey = "jkrDkfyqnnf+!RsfgrWdlfkd";
         private readonly IServiceScopeFactory _serviceScopeFactory;
         private readonly ILogger<AccountService> _logger;
+        private readonly IMapper _mapper;
 
         public AccountService(
             IServiceScopeFactory serviceScopeFactory,
-            ILogger<AccountService> logger
+            ILogger<AccountService> logger,
+            IMapper mapper
             )
         {
             _serviceScopeFactory = serviceScopeFactory;
             _logger = logger;
+            _mapper = mapper;
         }
 
         public CreateAccountResponse CreateAccount(CreateAccountRequest accountCreateRequest)
@@ -66,18 +70,8 @@ namespace CardStorageService.Services.Impl
                 };
             }
 
-            (string passwordSalt, string passwordHash) = CreatePasswordHash(accountCreateRequest.Password);
-
-            account = new Account()
-            {
-                EMail = accountCreateRequest.EMail,
-                FirstName = accountCreateRequest.FirstName,
-                SecondName = accountCreateRequest.SecondName,
-                LastName = accountCreateRequest.LastName,
-                PasswordHash = passwordHash,
-                PasswordSalt = passwordSalt,
-                Locked = false
-            };
+            account = _mapper.Map<Account>(accountCreateRequest);
+            (account.PasswordSalt, account.PasswordHash) = CreatePasswordHash(accountCreateRequest.Password);
 
             context.Accounts.Add(account);
             if (context.SaveChanges() > 0)
@@ -135,7 +129,7 @@ namespace CardStorageService.Services.Impl
             return account;
         }
 
-        public int UpdateAccount(Account data)
+        public int UpdateAccount(UpdateAccountRequest data)
         {
             if (data == null)
             {

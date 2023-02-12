@@ -1,11 +1,15 @@
-﻿using Azure.Core;
+﻿using AutoMapper;
+using Azure.Core;
 using CardStorageService.Config;
 using CardStorageService.Data;
 using CardStorageService.Models;
 using CardStorageService.Models.Dto;
+using CardStorageService.Models.Requests.Account;
 using CardStorageService.Models.Requests.Card;
 using CardStorageService.Models.Response.Card;
 using CardStorageService.Services;
+using FluentValidation;
+using FluentValidation.Results;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -23,7 +27,10 @@ namespace CardStorageService.Controllers
 
         private readonly ILogger<CardController> _logger;
         private readonly ICardRepositoryService _repository;
+        private readonly IMapper _mapper;
         private readonly IOptions<CardControllerConfig> _configuration;
+        private readonly IValidator<CreateCardRequest> _createRequestValidator;
+        private readonly IValidator<UpdateCardRequest> _updateRequestValidator;
 
         #endregion
 
@@ -32,11 +39,17 @@ namespace CardStorageService.Controllers
         public CardController(
             ILogger<CardController> logger,
             ICardRepositoryService repositoryService,
-            IOptions<CardControllerConfig> configuration)
+            IMapper mapper,
+            IOptions<CardControllerConfig> configuration,
+            IValidator<CreateCardRequest> createRequestValidator,
+            IValidator<UpdateCardRequest> updateRequestValidator)
         {
             _logger = logger;
             _repository = repositoryService;
+            _mapper = mapper;
             _configuration = configuration;
+            _createRequestValidator = createRequestValidator;
+            _updateRequestValidator = updateRequestValidator;
         }
 
         #endregion
@@ -49,22 +62,29 @@ namespace CardStorageService.Controllers
         {
             try
             {
-                var cardId = _repository.Create(new Data.Card
+                ValidationResult validationResult = _createRequestValidator.Validate(request);
+                if (validationResult.IsValid)
                 {
-                    ClientId = request.ClientId,
-                    Number = request.Number,
-                    Name = request.Name,
-                    CVV2 = request.CVV2,
-                    ExpDate = request.ExpDate,
-                });
+                    // Add automapper
+                    var cardId = _repository.Create(_mapper.Map<Card>(request));
 
-                if (cardId != Guid.Empty)
+                    if (cardId != Guid.Empty)
+                    {
+                        return Ok(new CreateCardResponse
+                        {
+                            CardId = cardId,
+                            ErrorCode = (int)OperationErrorCodes.OperationOk,
+                            ErrorMessage = ""
+                        });
+                    }
+                }
+                else
                 {
                     return Ok(new CreateCardResponse
                     {
-                        CardId = cardId,
-                        ErrorCode = (int)OperationErrorCodes.OperationOk,
-                        ErrorMessage = ""
+                        CardId = Guid.Empty,
+                        ErrorCode = (int)OperationErrorCodes.CreateError,
+                        ErrorMessage = $"Create card parameters are not valid. {validationResult}"
                     });
                 }
             }
@@ -102,14 +122,7 @@ namespace CardStorageService.Controllers
                 {
                     return Ok(new GetCardResponse
                     {
-                        Card = new CardDto()
-                        {
-                            ClientId = card.ClientId,
-                            Number = card.Number,
-                            Name = card.Name,
-                            CVV2 = card.CVV2,
-                            ExpDate = card.ExpDate.ToString("MM/yy")
-                        },
+                        Card = _mapper.Map<CardDto>(card),
                         ErrorCode = (int)OperationErrorCodes.OperationOk,
                         ErrorMessage = ""
                     });
@@ -149,16 +162,8 @@ namespace CardStorageService.Controllers
                 {
                     return Ok(new GetCardsResponse
                     {
-                        Cards = cards.Select(card => new CardDto 
-                        {
-                            CardId = card.CardId,
-                            ClientId = card.ClientId,
-                            Number = card.Number,
-                            Name = card.Name,
-                            CVV2 = card.CVV2,
-                            ExpDate = card.ExpDate.ToString("MM/yy")
-
-                        }).ToList(),
+                        // Add Automapper
+                        Cards = cards.Select(card => _mapper.Map<CardDto>(card)).ToList(),
                         ErrorCode = (int)OperationErrorCodes.OperationOk,
                         ErrorMessage = ""
                     });
@@ -198,16 +203,8 @@ namespace CardStorageService.Controllers
                 {
                     return Ok(new GetCardsResponse
                     {
-                        Cards = cards.Select(card => new CardDto
-                        {
-                            CardId = card.CardId,
-                            ClientId = card.ClientId,
-                            Number = card.Number,
-                            Name = card.Name,
-                            CVV2 = card.CVV2,
-                            ExpDate = card.ExpDate.ToString("MM/yy")
-
-                        }).ToList(),
+                        // Add Automapper
+                        Cards = cards.Select(card => _mapper.Map<CardDto>(card)).ToList(),
                         ErrorCode = (int)OperationErrorCodes.OperationOk,
                         ErrorMessage = ""
                     });
@@ -241,23 +238,29 @@ namespace CardStorageService.Controllers
         {
             try
             {
-                var result = _repository.Update(new Data.Card
+                ValidationResult validationResult = _updateRequestValidator.Validate(request);
+                if (validationResult.IsValid)
                 {
-                    CardId = request.CardId,
-                    ClientId = request.ClientId,
-                    Number = request.Number,
-                    Name = request.Name,
-                    CVV2 = request.CVV2,
-                    ExpDate = request.ExpDate,
-                });
-
-                if (result > 0)
+                    // Add Automapper
+                    var result = _repository.Update(_mapper.Map<Card>(request));
+                    
+                    if (result > 0)
+                    {
+                        return Ok(new UpdateCardResponse
+                        {
+                            Result = result,
+                            ErrorCode = (int)OperationErrorCodes.OperationOk,
+                            ErrorMessage = ""
+                        });
+                    }
+                }
+                else
                 {
                     return Ok(new UpdateCardResponse
                     {
-                        Result = result,
-                        ErrorCode = (int)OperationErrorCodes.OperationOk,
-                        ErrorMessage = ""
+                        Result = 0,
+                        ErrorCode = (int)OperationErrorCodes.UpdateError,
+                        ErrorMessage = $"Update card parameters are not valid. {validationResult}"
                     });
                 }
             }
@@ -283,7 +286,7 @@ namespace CardStorageService.Controllers
             });
         }
 
-        [HttpPost("delete")]
+        [HttpDelete("delete")]
         [ProducesResponseType(typeof(string), StatusCodes.Status200OK)]
         public IActionResult Delete([FromQuery] Guid requestId)
         {

@@ -9,6 +9,11 @@ using CardStorageService.Models.Dto;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.Options;
 using CardStorageService.Config;
+using FluentValidation;
+using CardStorageService.Models.Requests.Card;
+using FluentValidation.Results;
+using CardStorageService.Data;
+using AutoMapper;
 
 namespace CardStorageService.Controllers
 {
@@ -22,7 +27,10 @@ namespace CardStorageService.Controllers
 
         private readonly ILogger<ClientController> _logger;
         private readonly IClientRepositoryService _repository;
+        private readonly IMapper _mapper;
         private readonly IOptions<ClientControllerConfig> _configuration;
+        private readonly IValidator<CreateClientRequest> _createRequestValidator;
+        private readonly IValidator<UpdateClientRequest> _updateRequestValidator;
 
         #endregion
 
@@ -31,11 +39,17 @@ namespace CardStorageService.Controllers
         public ClientController(
             ILogger<ClientController> logger,
             IClientRepositoryService repositoryService,
-            IOptions<ClientControllerConfig> configuration)
+            IMapper mapper,
+            IOptions<ClientControllerConfig> configuration,
+            IValidator<CreateClientRequest> createRequestValidator,
+            IValidator<UpdateClientRequest> updateRequestValidator)
         {
             _logger = logger;
             _repository = repositoryService;
+            _mapper = mapper;
             _configuration = configuration;
+            _createRequestValidator = createRequestValidator;
+            _updateRequestValidator = updateRequestValidator;
         }
 
         #endregion
@@ -48,20 +62,29 @@ namespace CardStorageService.Controllers
         {
             try
             {
-                var clientId = _repository.Create(new Data.Client
+                ValidationResult validationResult = _createRequestValidator.Validate(request);
+                if (validationResult.IsValid)
                 {
-                    Name = request.Name,
-                    SecondName = request.SecondName,
-                    Patronymic = request.Patronymic,
-                });
+                    // Add Automapper
+                    var clientId = _repository.Create(_mapper.Map<Client>(request));
 
-                if (clientId > 0)
+                    if (clientId > 0)
+                    {
+                        return Ok(new CreateClientResponse
+                        {
+                            ClientId = clientId,
+                            ErrorCode = (int)OperationErrorCodes.OperationOk,
+                            ErrorMessage = ""
+                        });
+                    }
+                }
+                else
                 {
                     return Ok(new CreateClientResponse
                     {
-                        ClientId = clientId,
-                        ErrorCode = (int)OperationErrorCodes.OperationOk,
-                        ErrorMessage = ""
+                        ClientId = 0,
+                        ErrorCode = (int)OperationErrorCodes.CreateError,
+                        ErrorMessage = $"Create client parameters are not valid. {validationResult}"
                     });
                 }
             }
@@ -100,13 +123,7 @@ namespace CardStorageService.Controllers
                 {
                     return Ok(new GetClientResponse
                     {
-                        Client = new ClientDto()
-                        {
-                            ClientId = client.ClientId,
-                            Name = client.Name,
-                            SecondName = client.SecondName,
-                            Patronymic = client.Patronymic,
-                        },
+                        Client = _mapper.Map<ClientDto>(client),
                         ErrorCode = (int)OperationErrorCodes.OperationOk,
                         ErrorMessage = ""
                     });
@@ -145,22 +162,10 @@ namespace CardStorageService.Controllers
 
                 if (clients != null)
                 {
-                    var clientsDto = new List<ClientDto>();
-
-                    foreach (var client in clients)
-                    {
-                        clientsDto.Add(new ClientDto()
-                        {
-                            ClientId = client.ClientId,
-                            Name = client.Name,
-                            SecondName = client.SecondName,
-                            Patronymic = client.Patronymic,
-                        });
-                    };
-
                     return Ok(new GetClientsResponse
                     {
-                        Clients = clientsDto,
+                        // Add Automapper
+                        Clients = clients.Select(client => _mapper.Map<ClientDto>(client)).ToList(),
                         ErrorCode = (int)OperationErrorCodes.OperationOk,
                         ErrorMessage = ""
                     });
@@ -195,21 +200,29 @@ namespace CardStorageService.Controllers
         {
             try
             {
-                var result = _repository.Update(new Data.Client
+                ValidationResult validationResult = _updateRequestValidator.Validate(request);
+                if (validationResult.IsValid)
                 {
-                    ClientId = request.Id,
-                    Name = request.Name,
-                    SecondName = request.SecondName,
-                    Patronymic = request.Patronymic,
-                });
+                    // Add Automapper
+                    var result = _repository.Update(_mapper.Map<Client>(request));
 
-                if (result > 0)
+                    if (result > 0)
+                    {
+                        return Ok(new UpdateClientResponse
+                        {
+                            Result = result,
+                            ErrorCode = (int)OperationErrorCodes.OperationOk,
+                            ErrorMessage = ""
+                        });
+                    }
+                }
+                else
                 {
                     return Ok(new UpdateClientResponse
                     {
-                        Result = result,
-                        ErrorCode = (int)OperationErrorCodes.OperationOk,
-                        ErrorMessage = ""
+                        Result = 0,
+                        ErrorCode = (int)OperationErrorCodes.UpdateError,
+                        ErrorMessage = $"Update client parameters are not valid. {validationResult}"
                     });
                 }
             }
@@ -235,7 +248,7 @@ namespace CardStorageService.Controllers
             });
         }
 
-        [HttpPost("delete")]
+        [HttpDelete("delete")]
         [ProducesResponseType(typeof(string), StatusCodes.Status200OK)]
         public IActionResult Delete([FromQuery] int requestId)
         {

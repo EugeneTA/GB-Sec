@@ -8,7 +8,7 @@ namespace CardStorageService.Services
     {
         public CreateAccountResponse CreateAccount(CreateAccountRequest accountCreateRequest);
         public Account GetAccount(int id);
-        public int UpdateAccount(Account data);
+        public int UpdateAccount(UpdateAccountRequest data);
         public int Delete(int id);
     }
 }
